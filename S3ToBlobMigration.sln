@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "S3ToBlobMigration", "S3ToBlobMigration\S3ToBlobMigration.csproj", "{32382329-A8DC-4E9C-B010-274578532EA3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StorageAccess", "StorageAccess\StorageAccess.csproj", "{AEA4113F-5356-492C-8779-20A6CB02FE48}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MigrationWebJob", "MigrationWebJob\MigrationWebJob.csproj", "{8D5AD921-8631-4D29-93C7-3D0F51607E9C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{32382329-A8DC-4E9C-B010-274578532EA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32382329-A8DC-4E9C-B010-274578532EA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32382329-A8DC-4E9C-B010-274578532EA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32382329-A8DC-4E9C-B010-274578532EA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AEA4113F-5356-492C-8779-20A6CB02FE48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEA4113F-5356-492C-8779-20A6CB02FE48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEA4113F-5356-492C-8779-20A6CB02FE48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEA4113F-5356-492C-8779-20A6CB02FE48}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D5AD921-8631-4D29-93C7-3D0F51607E9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D5AD921-8631-4D29-93C7-3D0F51607E9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D5AD921-8631-4D29-93C7-3D0F51607E9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D5AD921-8631-4D29-93C7-3D0F51607E9C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
