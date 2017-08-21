@@ -2,13 +2,12 @@
 using Amazon.S3.Model;
 using Microsoft.ServiceBus.Messaging;
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
 using System;
-using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MigrationWebJob
 {
@@ -16,10 +15,10 @@ namespace MigrationWebJob
     {
         static void Main(string[] args)
         {
-            var connectionString = "Endpoint=sb://storagemigration.servicebus.windows.net/;SharedAccessKeyName=migrationservicepolicy;SharedAccessKey=zYOzygnwOkFbEdJgQlZiiYvS53Oqrxg3Iw5mw7VyZR4=";
-            var queueName = "contentmigrationprioritizationqueue";
+            var connectionString = ConfigurationManager.ConnectionStrings["ServiceBusConnectionString"];
+            var queueName = ConfigurationManager.AppSettings["QueueName"];
 
-            var queueClient = QueueClient.CreateFromConnectionString(connectionString, queueName);
+            var queueClient = QueueClient.CreateFromConnectionString(connectionString.ConnectionString, queueName);
             while (true)
             {
                 BrokeredMessage message = queueClient.Receive();
@@ -39,48 +38,79 @@ namespace MigrationWebJob
 
         private static void ProcessMessage(BrokeredMessage message)
         {
-            AmazonS3Client client = new AmazonS3Client("AKIAIN3OFTQNK5NUJ2KA",
-             "pQAJlH21mfzO1tQLw6TpRYKTDEwo5MGtU1VFecRw", Amazon.RegionEndpoint.APSoutheast2);
-
-
             string bucketName = string.Empty;
             string keyName = string.Empty;
-            string splitString = "<SplitString>";
+            string splitString = "<SPLITSTRING>";
+            Stream bodyStream = message.GetBody<Stream>();
+            StreamReader sr = new StreamReader(bodyStream);
+            string msg = sr.ReadToEnd();
+            var splitArray = msg.Split(new string[] { splitString },StringSplitOptions.RemoveEmptyEntries);
+            bucketName = splitArray[0];
+            AmazonS3Client client = new AmazonS3Client(ConfigurationManager.AppSettings["AWSKey"],
+                 ConfigurationManager.AppSettings["AWSSecret"], Amazon.RegionEndpoint.APSouth1);
 
-            string msg = message.GetBody<string>();
             if (!string.IsNullOrEmpty(msg))
             {
-                int idx = msg.IndexOf(splitString);
-
-                bucketName = msg.Substring(0, idx);
-                keyName = msg.Substring(idx + splitString.Length);
-
-                GetObjectRequest request = new GetObjectRequest
+                if (splitArray[1] == "FOLDER")
                 {
-                    BucketName = bucketName,
-                    Key = keyName
-                };
-
-                using (GetObjectResponse response = client.GetObject(request))
-                {
-                    response.WriteResponseStreamToFile(keyName);
+                    transferFolder(client, splitArray[2], bucketName,splitArray[2]);
                 }
-
-                CloudStorageAccount storageAccount = new CloudStorageAccount(new Microsoft.WindowsAzure.Storage.Auth.StorageCredentials("testify", "5nThM3H9qA3JJ65514epeZ0RljkBUEeJ5fpCb9pdFBYfuDfPj3EweIeWr4uG+iBvsI7YzVgAyRMW6VPXZoTJgQ==", "primary")
-        , true);
-                CloudBlobClient cb = storageAccount.CreateCloudBlobClient();
-                CloudBlobContainer cbc = cb.GetContainerReference(bucketName);
-                cbc.CreateIfNotExists();
-                CloudBlockBlob cbb = cbc.GetBlockBlobReference(keyName);
-
-                using (FileStream fs = new FileStream(keyName, FileMode.Open))
+                else
                 {
-                    cbb.UploadFromStream(fs);
-                    fs.Close();
-                    File.Delete(keyName);
+                    transferFile(client, splitArray[2], bucketName,string.Empty);
                 }
-
             }
+        }
+
+        private static void transferFolder(AmazonS3Client client, string folderName, string bucketName, string folderPath)
+        {
+          var response=  client.ListObjectsV2(new ListObjectsV2Request() { BucketName = bucketName, Prefix = folderPath });
+            if(response.KeyCount>0)
+            {
+                foreach (var item in response.S3Objects)
+                {
+                    if(item.Key.Last()=='/')
+                    {
+                        transferFolder(client, item.ETag, bucketName,folderPath + "/" + item.ETag);
+                    }
+                    else
+                    {
+                        transferFile(client, item.Key, bucketName, folderPath);
+                    }
+                }
+            }
+        }
+
+        private static void transferFile(AmazonS3Client client, string fileName, string bucketName,string folderPath)
+        {
+            
+            GetObjectRequest request = new GetObjectRequest
+            {
+                BucketName = bucketName,
+                Key = fileName
+            };
+
+            using (GetObjectResponse response = client.GetObject(request))
+            {
+                response.WriteResponseStreamToFile(fileName);
+            }
+
+            CloudStorageAccount storageAccount = new CloudStorageAccount(new 
+                StorageCredentials(ConfigurationManager.AppSettings["BlobAccountName"], ConfigurationManager.AppSettings["BlobAccountKey"],
+                ConfigurationManager.AppSettings["KeyName"])
+    , true);
+            CloudBlobClient cb = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer cbc = cb.GetContainerReference(bucketName);
+            cbc.CreateIfNotExists();
+            CloudBlockBlob cbb = cbc.GetBlockBlobReference(fileName);
+
+            using (FileStream fs = new FileStream(fileName, FileMode.Open))
+            {
+                cbb.UploadFromStream(fs);
+                fs.Close();
+                File.Delete(fileName);
+            }
+
         }
     }
 }

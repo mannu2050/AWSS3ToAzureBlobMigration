@@ -12,8 +12,8 @@ namespace StorageAccess
         IAmazonS3 client;
         public AccessStorageS3()
         {
-            client = new Amazon.S3.AmazonS3Client("AKIAIN3OFTQNK5NUJ2KA",
-                "pQAJlH21mfzO1tQLw6TpRYKTDEwo5MGtU1VFecRw", Amazon.RegionEndpoint.APSoutheast2);
+            client = new Amazon.S3.AmazonS3Client("",
+                "", Amazon.RegionEndpoint.APSoutheast2);
         }
 
         public bool CreateBucket(string bucketName)
