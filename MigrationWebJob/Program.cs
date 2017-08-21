@@ -38,14 +38,28 @@ namespace MigrationWebJob
 
         private static void ProcessMessage(BrokeredMessage message)
         {
-            string bucketName = string.Empty;
+            string sourceBucketName = string.Empty;
+            string destinationBucketName = string.Empty;
+
             string keyName = string.Empty;
             string splitString = "<SPLITSTRING>";
+
             Stream bodyStream = message.GetBody<Stream>();
             StreamReader sr = new StreamReader(bodyStream);
             string msg = sr.ReadToEnd();
             var splitArray = msg.Split(new string[] { splitString },StringSplitOptions.RemoveEmptyEntries);
-            bucketName = splitArray[0];
+
+            sourceBucketName = splitArray[0];
+            if(splitArray.Length>3)
+            {
+                destinationBucketName = splitArray[3];
+            }
+            else
+            {
+                destinationBucketName = sourceBucketName;
+            }
+
+
             AmazonS3Client client = new AmazonS3Client(ConfigurationManager.AppSettings["AWSKey"],
                  ConfigurationManager.AppSettings["AWSSecret"], Amazon.RegionEndpoint.APSouth1);
 
@@ -53,16 +67,16 @@ namespace MigrationWebJob
             {
                 if (splitArray[1] == "FOLDER")
                 {
-                    transferFolder(client, splitArray[2], bucketName,splitArray[2]);
+                    transferFolder(client, splitArray[2], sourceBucketName,splitArray[2], destinationBucketName);
                 }
                 else
                 {
-                    transferFile(client, splitArray[2], bucketName,string.Empty);
+                    transferFile(client, splitArray[2], sourceBucketName,string.Empty, destinationBucketName);
                 }
             }
         }
 
-        private static void transferFolder(AmazonS3Client client, string folderName, string bucketName, string folderPath)
+        private static void transferFolder(AmazonS3Client client, string folderName, string bucketName, string folderPath, string destinationBucketName)
         {
           var response=  client.ListObjectsV2(new ListObjectsV2Request() { BucketName = bucketName, Prefix = folderPath });
             if(response.KeyCount>0)
@@ -71,19 +85,19 @@ namespace MigrationWebJob
                 {
                     if(item.Key.Last()=='/')
                     {
-                        transferFolder(client, item.ETag, bucketName,folderPath + "/" + item.ETag);
+                        transferFolder(client, item.ETag, bucketName,folderPath + "/" + item.ETag, destinationBucketName);
                     }
                     else
                     {
-                        transferFile(client, item.Key, bucketName, folderPath);
+                        transferFile(client, item.Key, bucketName, folderPath, destinationBucketName);
                     }
                 }
             }
         }
 
-        private static void transferFile(AmazonS3Client client, string fileName, string bucketName,string folderPath)
+        private static void transferFile(AmazonS3Client client, string fileName, string bucketName, string folderPath, string destinationBucketName)
         {
-            
+
             GetObjectRequest request = new GetObjectRequest
             {
                 BucketName = bucketName,
@@ -95,12 +109,12 @@ namespace MigrationWebJob
                 response.WriteResponseStreamToFile(fileName);
             }
 
-            CloudStorageAccount storageAccount = new CloudStorageAccount(new 
+            CloudStorageAccount storageAccount = new CloudStorageAccount(new
                 StorageCredentials(ConfigurationManager.AppSettings["BlobAccountName"], ConfigurationManager.AppSettings["BlobAccountKey"],
                 ConfigurationManager.AppSettings["KeyName"])
     , true);
             CloudBlobClient cb = storageAccount.CreateCloudBlobClient();
-            CloudBlobContainer cbc = cb.GetContainerReference(bucketName);
+            CloudBlobContainer cbc = cb.GetContainerReference(destinationBucketName);
             cbc.CreateIfNotExists();
             CloudBlockBlob cbb = cbc.GetBlockBlobReference(fileName);
 
@@ -110,7 +124,6 @@ namespace MigrationWebJob
                 fs.Close();
                 File.Delete(fileName);
             }
-
         }
     }
 }
